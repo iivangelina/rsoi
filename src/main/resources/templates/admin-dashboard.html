@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ru"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Панель администратора | HR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        :root {
+            --bg: radial-gradient(circle at 10% 0%, #0f172a 0%, #020617 55%, #000 100%);
+            --panel: rgba(15,23,42,.45);
+            --card: rgba(15,23,42,.35);
+            --accent: #38bdf8;
+            --danger: #f43f5e;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,sans-serif;
+            font-size: 15px;
+        }
+        .topbar {
+            background: rgba(2,6,23,.35);
+            border-bottom: 1px solid rgba(255,255,255,.04);
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .brand { font-weight: 700; font-size: 1.1rem; }
+        .main { display: flex; min-height: calc(100vh - 56px); }
+        .sidebar {
+            width: 240px;
+            background: rgba(2,6,23,.15);
+            border-right: 1px solid rgba(255,255,255,.02);
+            padding: 18px 14px 16px;
+        }
+        .sidebar-title {
+            font-size: .78rem;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin: 10px 0 6px;
+            letter-spacing: .03em;
+        }
+        .menu a {
+            display: block;
+            color: #e2e8f0;
+            text-decoration: none;
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: .9rem;
+            margin-bottom: 5px;
+            transition: .12s;
+        }
+        .menu a:hover,
+        .menu a.active { background: rgba(148,163,184,.12); }
+
+        .content {
+            flex: 1;
+            padding: 20px 24px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        h1 { font-size: 1.45rem; margin: 0; }
+        .subtitle { color: #94a3b8; font-size: .9rem; margin-top: 3px; }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+            border: none;
+            border-radius: 999px;
+            color: #fff;
+            padding: 8px 16px 9px;
+            font-weight: 600;
+            font-size: .82rem;
+            cursor: pointer;
+        }
+        .btn-secondary {
+            background: rgba(15,23,42,.4);
+            border: 1px solid rgba(148,163,184,.33);
+            border-radius: 999px;
+            color: #e2e8f0;
+            padding: 5px 12px 6px;
+            font-size: .8rem;
+            cursor: pointer;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,.02);
+            border-radius: 16px;
+            padding: 14px 14px 13px;
+            backdrop-filter: blur(10px);
+        }
+        .card-title { font-size: .9rem; color: #cbd5f5; display: flex; justify-content: space-between; }
+        .card-value { font-size: 1.6rem; font-weight: 700; margin-top: 6px; }
+        .card-hint { font-size: .75rem; color: #94a3b8; margin-top: 5px; }
+
+        .users-card {
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,.02);
+            border-radius: 16px;
+            padding: 14px 14px 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .8rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px 4px;
+            vertical-align: middle;
+        }
+        th {
+            color: #94a3b8;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(255,255,255,.02);
+            font-size: .75rem;
+        }
+        tr + tr td { border-top: 1px solid rgba(255,255,255,.018); }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            background: rgba(15,118,110,.12);
+            border: 1px solid rgba(34,197,235,.15);
+            border-radius: 999px;
+            padding: 3px 10px 4px;
+            font-size: .7rem;
+        }
+        .badge-admin {
+            background: rgba(248,113,113,.14);
+            border: 1px solid rgba(248,113,113,.35);
+        }
+        .actions-cell {
+            display: flex;
+            gap: 6px;
+        }
+        .table-btn {
+            border: none;
+            border-radius: 10px;
+            padding: 5px 11px 6px;
+            font-size: .72rem;
+            cursor: pointer;
+        }
+        .table-btn.edit {
+            background: rgba(56,189,248,.14);
+            color: #e2e8f0;
+        }
+        .table-btn.delete {
+            background: rgba(244,63,94,.15);
+            color: #fecdd3;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(2,6,23,.58);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .modal {
+            background: rgba(15,23,42,.97);
+            color: #e2e8f0;
+            width: min(520px, 95vw);
+            border-radius: 18px;
+            border: 1px solid rgba(148,163,184,.12);
+            padding: 20px 22px 18px;
+            box-shadow: 0 24px 55px rgba(0,0,0,.35);
+        }
+        .modal-title { font-size: 1.05rem; font-weight: 600; margin-bottom: 6px; }
+        .modal-sub { font-size: .77rem; color: #94a3b8; margin-bottom: 14px; }
+        .form-group { margin-bottom: 11px; }
+        .form-label { font-size: .74rem; margin-bottom: 4px; display: block; }
+        .form-input, .form-select {
+            width: 100%;
+            background: rgba(15,23,42,.4);
+            border: 1px solid rgba(148,163,184,.35);
+            border-radius: 12px;
+            padding: 8px 11px;
+            font-size: .82rem;
+            outline: none;
+            color: #e2e8f0;
+        }
+        .form-input:focus, .form-select:focus {
+            border-color: rgba(56,189,248,.7);
+            background: rgba(15,23,42,.7);
+        }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+        .toast {
+            position: fixed;
+            top: 18px;
+            right: 20px;
+            background: rgba(22,163,74,.9);
+            color: #fff;
+            padding: 10px 13px;
+            border-radius: 12px;
+            font-size: .78rem;
+            display: none;
+            z-index: 300;
+            box-shadow: 0 12px 25px rgba(0,0,0,.3);
+        }
+
+        @media (max-width: 950px) {
+            .main { flex-direction: column; }
+            .sidebar { width: 100%; display: flex; gap: 16px; overflow-x: auto; }
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="topbar">
+    <div class="brand">HR Turnover • панель администратора</div>
+    <div>
+        <span sec:authentication="name" style="font-size:.78rem;margin-right:8px;"></span>
+        <a th:href="@{/logout}" style="color:#f97316; text-decoration:none; font-size:.78rem;">Выйти</a>
+    </div>
+</div>
+
+<div class="main">
+    <aside class="sidebar">
+        <div class="sidebar-title">Навигация</div>
+        <div class="menu">
+            <a href="/admin/dashboard" class="active">Панель</a>
+            <a href="/users">Пользователи</a>
+            <a href="/dict/ping">Проверка справочников</a>
+            <a href="/hr-events">Кадровые события</a>
+            <a href="/metrics">Показатели</a>
+        </div>
+        <div class="sidebar-title">Роли</div>
+        <div class="menu">
+            <a th:href="@{/user/dashboard}">Посмотреть как сотрудник</a>
+        </div>
+    </aside>
+
+    <main class="content">
+        <div class="title-row">
+            <div>
+                <h1>Здравствуйте 👋</h1>
+                <p class="subtitle">Создавайте людей, меняйте роли, удаляйте лишнее — в один клик.</p>
+            </div>
+            <div>
+                <button id="btnOpenCreate" class="btn-primary">Новый пользователь</button>
+            </div>
+        </div>
+
+        <div class="cards">
+            <div class="card">
+                <div class="card-title">Всего пользователей</div>
+                <div class="card-value" id="statUsers">—</div>
+                <div class="card-hint">активные и заблокированные</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Кадровые события</div>
+                <div class="card-value" id="statEvents">—</div>
+                <div class="card-hint">все записи</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Текучесть (мес)</div>
+                <div class="card-value" id="statTurnover">—</div>
+                <div class="card-hint">по текущему месяцу</div>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:16px; flex-wrap:wrap;">
+            <div class="users-card" style="flex:1 1 360px; min-width: 360px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="font-size:1rem;font-weight:600;">Пользователи</span>
+                    <button class="btn-secondary" id="btnOpenCreate2">Добавить</button>
+                </div>
+                <table id="usersTable">
+                    <thead>
+                    <tr>
+                        <th>ФИО</th>
+                        <th>Логин</th>
+                        <th>Роль</th>
+                        <th>Статус</th>
+                        <th style="width:140px;">Действия</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr><td colspan="5" style="padding-top:8px;">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="users-card" style="margin:auto; max-width: 520px; width:100%;">
+                <div style="text-align:center; font-weight:600; margin-bottom:4px;">Увольнения по месяцам</div>
+                <canvas id="turnoverChart" height="130"></canvas>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="modal-backdrop" id="createModal">
+    <div class="modal">
+        <div class="modal-title">Новый пользователь</div>
+        <div class="modal-sub">Заполните — и человек сможет войти.</div>
+
+        <div class="form-group">
+            <label class="form-label" for="cFullName">ФИО</label>
+            <input id="cFullName" class="form-input" placeholder="Например: Иванов Иван" />
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="cUsername">Логин</label>
+            <input id="cUsername" class="form-input" placeholder="login" />
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="cPassword">Пароль</label>
+            <input id="cPassword" type="password" class="form-input" placeholder="не менее 6 символов" />
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="cConfirm">Подтверждение пароля</label>
+            <input id="cConfirm" type="password" class="form-input" placeholder="повторите пароль" />
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="cRole">Права доступа</label>
+            <select id="cRole" class="form-select">
+                <option value="USER">Обычный доступ</option>
+                <option value="ADMIN">Администратор</option>
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" data-close-create>Отмена</button>
+            <button class="btn-primary" id="btnCreateUser">Создать</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="editModal">
+    <div class="modal">
+        <div class="modal-title">Изменить пользователя</div>
+        <div class="modal-sub">Можете поправить ФИО, логин, роль и пароль.</div>
+
+        <input type="hidden" id="eId"/>
+
+        <div class="form-group">
+            <label class="form-label" for="eFullName">ФИО</label>
+            <input id="eFullName" class="form-input"/>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="eUsername">Логин</label>
+            <input id="eUsername" class="form-input"/>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="eRole">Права доступа</label>
+            <select id="eRole" class="form-select">
+                <option value="USER">Обычный доступ</option>
+                <option value="ADMIN">Администратор</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="ePassword">Новый пароль (если нужно)</label>
+            <input id="ePassword" type="password" class="form-input" placeholder="оставьте пустым — не изменится"/>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="eConfirm">Подтверждение пароля</label>
+            <input id="eConfirm" type="password" class="form-input"/>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" data-close-edit>Отмена</button>
+            <button class="btn-primary" id="btnUpdateUser">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast">Готово ✅</div>
+
+<script>
+    const createModal = document.getElementById('createModal');
+    const editModal = document.getElementById('editModal');
+    const toast = document.getElementById('toast');
+
+    function openCreate() { createModal.style.display = 'flex'; }
+    function closeCreate() { createModal.style.display = 'none'; }
+    function openEdit() { editModal.style.display = 'flex'; }
+    function closeEdit() { editModal.style.display = 'none'; }
+
+    document.getElementById('btnOpenCreate').addEventListener('click', openCreate);
+    document.getElementById('btnOpenCreate2').addEventListener('click', openCreate);
+    createModal.addEventListener('click', e => { if (e.target === createModal) closeCreate(); });
+    editModal.addEventListener('click', e => { if (e.target === editModal) closeEdit(); });
+    document.querySelector('[data-close-create]').addEventListener('click', closeCreate);
+    document.querySelector('[data-close-edit]').addEventListener('click', closeEdit);
+
+    function showToast(msg) {
+        toast.textContent = msg;
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 2500);
+    }
+
+    function loadUsers() {
+        fetch('/api/users', { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(list => {
+                const tbody = document.querySelector('#usersTable tbody');
+                tbody.innerHTML = '';
+                list.forEach(u => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${u.fullName || '—'}</td>
+                        <td>${u.username}</td>
+                        <td>
+                            <span class="badge ${u.role === 'ADMIN' ? 'badge-admin' : ''}">
+                                ${u.role === 'ADMIN' ? 'администратор' : 'сотрудник'}
+                            </span>
+                        </td>
+                        <td>${(u.enabled === 1 || u.enabled === true) && (u.active === 1 || u.active === true) ? 'активен' : 'заблокирован'}</td>
+                        <td>
+                            <div class="actions-cell">
+                                <button class="table-btn edit"
+                                    data-edit='${JSON.stringify(u).replace(/'/g, "&apos;")}'>
+                                    Изменить
+                                </button>
+                                <button class="table-btn delete" data-del="${u.id}">
+                                    Удалить
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                document.getElementById('statUsers').textContent = list.length;
+
+                document.querySelectorAll('[data-edit]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const u = JSON.parse(btn.getAttribute('data-edit'));
+                        document.getElementById('eId').value = u.id;
+                        document.getElementById('eFullName').value = u.fullName || '';
+                        document.getElementById('eUsername').value = u.username || '';
+                        document.getElementById('eRole').value = u.role || 'USER';
+                        document.getElementById('ePassword').value = '';
+                        document.getElementById('eConfirm').value = '';
+                        openEdit();
+                    });
+                });
+
+                document.querySelectorAll('[data-del]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const id = btn.getAttribute('data-del');
+                        if (!confirm('Удалить этого пользователя?')) return;
+                        const formData = new URLSearchParams();
+                        formData.append('id', id);
+                        fetch('/admin/users/delete', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: formData.toString()
+                        })
+                            .then(() => {
+                                showToast('Пользователь удалён');
+                                loadUsers();
+                            })
+                            .catch(() => showToast('Не удалось удалить'));
+                    });
+                });
+            })
+            .catch(() => {
+                const tbody = document.querySelector('#usersTable tbody');
+                tbody.innerHTML = '<tr><td colspan="5">Не удалось загрузить пользователей</td></tr>';
+            });
+    }
+
+    document.getElementById('btnCreateUser').addEventListener('click', () => {
+        const fullName = document.getElementById('cFullName').value.trim();
+        const username = document.getElementById('cUsername').value.trim();
+        const password = document.getElementById('cPassword').value.trim();
+        const confirm = document.getElementById('cConfirm').value.trim();
+        const role = document.getElementById('cRole').value;
+
+        if (!username || !password) {
+            alert('Укажите логин и пароль');
+            return;
+        }
+
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('fullName', fullName || username);
+        formData.append('password', password);
+        formData.append('confirmPassword', confirm);
+        formData.append('role', role);
+
+        fetch('/admin/users/create', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
+        })
+            .then(r => {
+                if (!r.ok) throw new Error();
+                closeCreate();
+                showToast('Пользователь создан ✅');
+                loadUsers();
+            })
+            .catch(() => showToast('Не удалось создать пользователя'));
+    });
+
+    document.getElementById('btnUpdateUser').addEventListener('click', () => {
+        const id = document.getElementById('eId').value;
+        const fullName = document.getElementById('eFullName').value.trim();
+        const username = document.getElementById('eUsername').value.trim();
+        const role = document.getElementById('eRole').value;
+        const password = document.getElementById('ePassword').value.trim();
+        const confirm = document.getElementById('eConfirm').value.trim();
+
+        const formData = new URLSearchParams();
+        formData.append('id', id);
+        formData.append('username', username);
+        formData.append('fullName', fullName);
+        formData.append('role', role);
+        formData.append('enabled', '1');
+        formData.append('active', '1');
+        if (password) {
+            formData.append('password', password);
+            formData.append('confirmPassword', confirm);
+        }
+
+        fetch('/admin/users/update', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
+        })
+            .then(r => {
+                if (!r.ok) throw new Error();
+                closeEdit();
+                showToast('Пользователь обновлён ✅');
+                loadUsers();
+            })
+            .catch(() => showToast('Не удалось обновить'));
+    });
+
+    function loadStats() {
+        fetch('/api/hr-events', { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('statEvents').textContent = data.length;
+                const byMonth = {};
+                data.forEach(ev => {
+                    if (ev.eventType !== 'TERMINATION') return;
+                    if (!ev.eventDate) return;
+                    const ym = ev.eventDate.slice(0, 7);
+                    byMonth[ym] = (byMonth[ym] || 0) + 1;
+                });
+                const labels = Object.keys(byMonth).sort();
+                const values = labels.map(l => byMonth[l]);
+                const ctx = document.getElementById('turnoverChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Увольнения',
+                            data: values,
+                            tension: 0.35,
+                            borderColor: '#38bdf8',
+                            backgroundColor: 'rgba(56, 189, 248, .15)',
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#38bdf8'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { color: '#94a3b8' } },
+                            y: { beginAtZero: true, ticks: { color: '#94a3b8', stepSize: 1 } }
+                        }
+                    }
+                });
+            });
+
+        fetch('/api/metrics/current', { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(m => {
+                const el = document.getElementById('statTurnover');
+                if (m && typeof m.turnoverMonth !== 'undefined') {
+                    el.textContent = m.turnoverMonth + '%';
+                } else {
+                    el.textContent = '—';
+                }
+            })
+            .catch(() => {
+                document.getElementById('statTurnover').textContent = '—';
+            });
+    }
+
+    loadUsers();
+    loadStats();
+</script>
+</body>
+</html>
+
+
+

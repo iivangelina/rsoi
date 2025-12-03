@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Вход | HR Turnover</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root {
+            --bg: radial-gradient(circle at 10% 10%, #00163b 0%, #002f73 45%, #021633 100%);
+            --card-bg: #fff;
+            --accent: #1677ff;
+            --accent-dark: #1557c0;
+            --text-main: #0f172a;
+            --muted: #6b7280;
+            --radius: 18px;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+        }
+        .card {
+            background: var(--card-bg);
+            width: 360px;
+            border-radius: var(--radius);
+            box-shadow: 0 25px 45px rgba(0, 0, 0, .25);
+            padding: 26px 28px 22px;
+        }
+        .logo-circle {
+            width: 46px;
+            height: 46px;
+            background: linear-gradient(160deg, #1d8fff, #1557c0);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 14px;
+        }
+        h1 {
+            font-size: 20px;
+            margin: 0 0 3px;
+            color: var(--text-main);
+        }
+        .subtitle {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 18px;
+        }
+        label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 6px;
+            color: #0f172a;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            border-radius: 999px;
+            padding: 7px 12px;
+            outline: none;
+            font-size: 13px;
+            transition: border .15s ease;
+        }
+        input:focus {
+            border-color: #1677ff;
+        }
+        .btn-primary {
+            width: 100%;
+            border: none;
+            border-radius: 999px;
+            padding: 8px 12px;
+            background: linear-gradient(90deg, #1677ff, #1557c0);
+            color: #fff;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 14px;
+        }
+        .link-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        a {
+            color: #1557c0;
+            text-decoration: none;
+        }
+        .alert {
+            background: #fee2e2;
+            color: #991b1b;
+            font-size: 12px;
+            padding: 7px 10px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        .success {
+            background: #dcfce7;
+            color: #166534;
+            font-size: 12px;
+            padding: 7px 10px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo-circle">HR</div>
+    <h1>Вход в систему</h1>
+    <p class="subtitle">Анализ текучести персонала</p>
+
+    <div th:if="${param.error}" class="alert">
+        Неверное имя пользователя или пароль
+    </div>
+    <div th:if="${param.logout}" class="success">
+        Вы вышли из системы
+    </div>
+    <div th:if="${regSuccess}" class="success" th:text="${regSuccess}"></div>
+    <div th:if="${error}" class="alert" th:text="${error}"></div>
+
+    <form th:action="@{/login}" method="post">
+        <label for="username">Имя пользователя</label>
+        <input id="username" name="username" type="text" required>
+
+        <label for="password" style="margin-top:10px;">Пароль</label>
+        <input id="password" name="password" type="password" required>
+
+        <button type="submit" class="btn-primary">Войти</button>
+    </form>
+
+    <div class="link-row">
+        <span></span>
+        <a th:href="@{/register}">Регистрация</a>
+    </div>
+
+    <div class="footer">
+        HR Turnover
+    </div>
+</div>
+</body>
+</html>

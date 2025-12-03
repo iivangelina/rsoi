@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Справочники (JSON) | HR Turnover</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root {
+            --bg: radial-gradient(circle at 10% 10%, #00163b 0%, #002f73 45%, #021633 100%);
+            --card-bg: #fff;
+            --muted: #6b7280;
+            --radius: 18px;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+        }
+        .card {
+            background: var(--card-bg);
+            width: 880px;
+            max-width: 96vw;
+            border-radius: var(--radius);
+            box-shadow: 0 25px 45px rgba(0,0,0,.25);
+            padding: 22px 24px 18px;
+        }
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .logo-circle {
+            width: 46px;
+            height: 46px;
+            background: linear-gradient(160deg, #1d8fff, #1557c0);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+            font-size: 15px;
+            margin-right: 10px;
+        }
+        .title-block { display: flex; align-items: center; gap: 10px; }
+        h1 { font-size: 18px; margin: 0; }
+        .subtitle { font-size: 12px; color: var(--muted); }
+        .btn {
+            border: none;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            background: #e2e8f0;
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, #1677ff, #1557c0);
+            color: #fff;
+        }
+        .json-box {
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 14px;
+            padding: 14px 16px;
+            font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+            font-size: 12px;
+            min-height: 260px;
+            white-space: pre;
+            overflow: auto;
+        }
+        .footer {
+            text-align: right;
+            font-size: 10px;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+        .input-url {
+            width: 240px;
+            border-radius: 999px;
+            border: 1px solid #d1d5db;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        .links a {
+            font-size: 11px;
+            color: #1557c0;
+            text-decoration: none;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="header-row">
+        <div class="title-block">
+            <div class="logo-circle">HR</div>
+            <div>
+                <h1>Справочники (JSON)</h1>
+                <p class="subtitle">Просмотр ответа от REST</p>
+            </div>
+        </div>
+        <div class="links">
+            <a th:href="@{/dict/ping}">ping</a>
+            <a th:href="@{/}">на главную</a>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <input id="urlInput" class="input-url" type="text"
+               th:value="${jsonUrl}" />
+        <button class="btn btn-primary" onclick="loadJson()">Загрузить</button>
+        <button class="btn" onclick="beautify()">Форматировать</button>
+    </div>
+
+    <div id="jsonBox" class="json-box">Нажми «Загрузить»</div>
+
+    <div class="footer">HR Turnover</div>
+</div>
+
+<script>
+    async function loadJson() {
+        const url = document.getElementById('urlInput').value;
+        const box = document.getElementById('jsonBox');
+        box.textContent = 'Загружаю...';
+        try {
+            const resp = await fetch(url);
+            const data = await resp.json();
+            box.textContent = JSON.stringify(data, null, 2);
+        } catch (e) {
+            box.textContent = 'Ошибка: ' + e;
+        }
+    }
+    function beautify() {
+        const box = document.getElementById('jsonBox');
+        try {
+            const obj = JSON.parse(box.textContent);
+            box.textContent = JSON.stringify(obj, null, 2);
+        } catch (e) {
+            // не json — молчим
+        }
+    }
+</script>
+</body>
+</html>

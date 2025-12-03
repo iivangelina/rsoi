@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security" lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Кадровые события | HR Turnover</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root {
+            --bg: radial-gradient(circle at 10% 10%, #00163b 0%, #002f73 45%, #021633 100%);
+            --card-bg: #fff;
+            --muted: #6b7280;
+            --radius: 18px;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+        }
+        .card {
+            background: var(--card-bg);
+            width: 980px;
+            max-width: 96vw;
+            border-radius: var(--radius);
+            box-shadow: 0 25px 45px rgba(0, 0, 0, .25);
+            padding: 22px 24px 18px;
+        }
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .logo-circle {
+            width: 46px;
+            height: 46px;
+            background: linear-gradient(160deg, #1d8fff, #1557c0);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+            font-size: 15px;
+            margin-right: 10px;
+        }
+        .title-block { display: flex; align-items: center; gap: 12px; }
+        h1 { font-size: 18px; margin: 0; color: #0f172a; }
+        .subtitle { font-size: 12px; color: var(--muted); }
+        .btn { border: none; border-radius: 999px; padding: 6px 12px; font-size: 12px; cursor: pointer; text-decoration: none; }
+        .btn-secondary { background: #e2e8f0; color: #0f172a; }
+        .btn-primary { background: #2563eb; color: #fff; }
+
+        .table-wrap { max-height: 460px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 14px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        thead { background: #f8fafc; position: sticky; top: 0; z-index: 1; }
+        th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #edf2f7; white-space: nowrap; }
+        tbody tr:nth-child(even) { background: #f9fafb; }
+        .comment { white-space: normal; max-width: 260px; }
+
+        .pill { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 11px; font-weight: 500; }
+        .pill-hire { background: #dcfce7; color: #166534; }
+        .pill-term { background: #fee2e2; color: #b91c1c; }
+        .pill-trans { background: #e0ecff; color: #1d4ed8; }
+
+        .footer { text-align: right; font-size: 10px; color: #94a3b8; margin-top: 6px; }
+
+        .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,.58);display:none;align-items:center;justify-content:center;z-index:200}
+        .modal{background:#fff;color:#0f172a;width:min(720px,95vw);border-radius:16px;border:1px solid #e5e7eb;padding:16px 16px 14px;box-shadow:0 24px 55px rgba(0,0,0,.25)}
+        .modal h3{margin:0 0 8px}
+        .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 12px}
+        .form-group{display:flex;flex-direction:column;gap:6px}
+        .form-label{font-size:12px;color:#475569}
+        .form-input,.form-select,.form-textarea{background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:8px 10px;color:#0f172a}
+        .form-textarea{min-height:70px;resize:vertical}
+        .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+        .toast{position:fixed;top:18px;right:20px;background:#16a34a;color:#fff;padding:10px 13px;border-radius:12px;font-size:12px;display:none;z-index:300}
+        @media (max-width:900px){.grid{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="header-row">
+        <div class="title-block">
+            <div class="logo-circle">HR</div>
+            <div>
+                <h1>Кадровые события</h1>
+                <p class="subtitle" th:text="'Всего: ' + ${#lists.size(events)}"></p>
+            </div>
+        </div>
+        <div>
+            <button class="btn btn-primary" id="btnOpenCreate" sec:authorize="hasRole('ADMIN')">Создать событие</button>
+            <a th:href="@{/metrics}" class="btn btn-secondary">Показатели</a>
+            <a th:href="@{/}" class="btn btn-secondary">На главную</a>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Сотрудник</th>
+                <th>Тип</th>
+                <th>Дата</th>
+                <th>Из отдела</th>
+                <th>В отдел</th>
+                <th>Комментарий</th>
+            </tr>
+            </thead>
+            <tbody>
+
+            <tr th:each="ev, stat : ${events}"
+                th:with="type=${ev.eventType != null} ? ${ev.eventType.toString()} : ''">
+                <td th:text="${stat.index + 1}">1</td>
+                <td th:text="${ev.employee != null ? ev.employee.lastName + ' ' + ev.employee.firstName + (ev.employee.middleName != null ? ' ' + ev.employee.middleName : '') : '—'}">
+                    Иванов Иван
+                </td>
+                <td>
+                    <span th:switch="${#strings.toUpperCase(type)}">
+                        <span th:case="'HIRE'"        class="pill pill-hire">Приём</span>
+                        <span th:case="'TERMINATION'"  class="pill pill-term">Увольнение</span>
+                        <span th:case="'TRANSFER'"     class="pill pill-trans">Перевод</span>
+                        <span th:case="*"              class="pill" th:text="${type}">Событие</span>
+                    </span>
+                </td>
+                <td th:text="${ev.eventDate}">2025-10-30</td>
+                <td th:text="${ev.fromDepartment != null ? ev.fromDepartment.name : ''}">Sales</td>
+                <td th:text="${ev.toDepartment != null ? ev.toDepartment.name : ''}">IT</td>
+                <td class="comment" th:text="${ev.comment}">Комментарий</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">HR Turnover</div>
+</div>
+
+<div class="modal-backdrop" id="createModal" sec:authorize="hasRole('ADMIN')">
+    <div class="modal">
+        <h3>Новое кадровое событие</h3>
+        <div class="grid">
+            <div class="form-group">
+                <label class="form-label">Сотрудник</label>
+                <select id="fEmployee" class="form-select"></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Тип события</label>
+                <select id="fType" class="form-select">
+                    <option value="HIRE">Приём</option>
+                    <option value="TRANSFER">Перевод</option>
+                    <option value="TERMINATION">Увольнение</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Дата</label>
+                <input id="fDate" type="date" class="form-input"/>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Причина</label>
+                <select id="fReason" class="form-select">
+                    <option value="">— не указана —</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Отдел (из)</label>
+                <select id="fFromDept" class="form-select"><option value="">— нет —</option></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Отдел (в)</label>
+                <select id="fToDept" class="form-select"><option value="">— нет —</option></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Должность (из)</label>
+                <select id="fFromPos" class="form-select"><option value="">— нет —</option></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Должность (в)</label>
+                <select id="fToPos" class="form-select"><option value="">— нет —</option></select>
+            </div>
+            <div class="form-group" style="grid-column:1 / -1;">
+                <label class="form-label">Комментарий</label>
+                <textarea id="fComment" class="form-textarea" placeholder="необязательно"></textarea>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" id="btnCancel" type="button">Отмена</button>
+            <button class="btn btn-primary" id="btnCreate" type="button">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast">Готово ✅</div>
+
+<script>
+    const modal = document.getElementById('createModal');
+    const toast = document.getElementById('toast');
+    const openBtn = document.getElementById('btnOpenCreate');
+    const cancelBtn = document.getElementById('btnCancel');
+    const createBtn = document.getElementById('btnCreate');
+
+    function openModal(){ modal.style.display='flex'; }
+    function closeModal(){ modal.style.display='none'; }
+    function showToast(msg){ toast.textContent = msg; toast.style.display='block'; setTimeout(()=>toast.style.display='none', 2200); }
+
+    if (openBtn) openBtn.addEventListener('click', openModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (modal) modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+    async function getJson(url){
+        const r = await fetch(url, { credentials:'same-origin' });
+        if (!r.ok) throw new Error('HTTP '+r.status);
+        return await r.json();
+    }
+    const put = (id,list,val='id',txt='name')=>{
+        const el=document.getElementById(id);
+        if(!el) return;
+        list.forEach(x=>{
+            const o=document.createElement('option');
+            o.value=x[val];
+            o.textContent=x[txt];
+            el.appendChild(o);
+        });
+    };
+
+    async function loadLookups(){
+        try{
+            const [emps,depts,poss,reasons] = await Promise.all([
+                getJson('/api/employees/active'),
+                getJson('/api/departments'),
+                getJson('/api/positions'),
+                getJson('/api/reasons')
+            ]);
+            put('fEmployee', emps, 'id', 'name');
+            put('fFromDept', depts); put('fToDept', depts);
+            put('fFromPos', poss);  put('fToPos', poss);
+            put('fReason', reasons);
+        }catch(e){
+        }
+    }
+    loadLookups();
+
+    async function createEvent(){
+        const get = id => document.getElementById(id).value;
+        const employeeId = get('fEmployee');
+        const eventType  = get('fType');
+        if (!employeeId || !eventType){ alert('Выберите сотрудника и тип'); return; }
+
+        const form = new URLSearchParams();
+        form.append('employeeId', employeeId);
+        form.append('eventType', eventType);
+        if (get('fDate'))     form.append('eventDate', get('fDate'));
+        if (get('fFromDept')) form.append('fromDepartmentId', get('fFromDept'));
+        if (get('fToDept'))   form.append('toDepartmentId',   get('fToDept'));
+        if (get('fFromPos'))  form.append('fromPositionId',   get('fFromPos'));
+        if (get('fToPos'))    form.append('toPositionId',     get('fToPos'));
+        if (get('fReason'))   form.append('reasonId',         get('fReason'));
+        if (get('fComment'))  form.append('comment',          get('fComment'));
+
+        const r = await fetch('/api/hr-events', {
+            method:'POST',
+            headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+            credentials:'same-origin',
+            body: form.toString()
+        });
+        if (!r.ok){
+            const txt = await r.text();
+            throw new Error(txt || ('HTTP '+r.status));
+        }
+        closeModal();
+        showToast('Событие создано ✅');
+        setTimeout(()=>location.reload(), 400);
+    }
+    if (createBtn) createBtn.addEventListener('click', ()=>createEvent().catch(e=>alert('Ошибка: '+e.message)));
+</script>
+</body>
+</html>
+
+

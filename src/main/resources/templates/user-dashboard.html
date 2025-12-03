@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${title}">Рабочий стол</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        :root {
+            --bg: radial-gradient(circle at 10% 0%, #0f172a 0%, #020617 55%, #000 100%);
+            --card: rgba(15,23,42,.35);
+            --line: rgba(255,255,255,.03);
+            --accent: #38bdf8;
+        }
+        body {
+            margin:0;
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color:#e2e8f0;
+            min-height:100vh;
+        }
+        .topbar {
+            background: rgba(2,6,23,.5);
+            border-bottom:1px solid rgba(255,255,255,.03);
+            padding:12px 18px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        }
+        .brand { font-weight:600; }
+        .logout { color:#f97316; text-decoration:none; font-size:.78rem; }
+        .muted { color:#94a3b8; font-size:.7rem; }
+        .content {
+            padding:20px 24px 24px;
+            display:flex;
+            flex-direction:column;
+            gap:16px;
+        }
+        .card {
+            background:var(--card);
+            border:1px solid rgba(255,255,255,.02);
+            border-radius:16px;
+            padding:16px 16px 14px;
+        }
+        h1 { font-size:1.25rem; margin-bottom:3px; }
+        .link-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+        .link-btn {
+            background:rgba(148,163,184,.12);
+            border:1px solid rgba(148,163,184,.18);
+            border-radius:999px;
+            padding:5px 12px 6px;
+            font-size:.75rem;
+            color:#e2e8f0;
+            text-decoration:none;
+        }
+        .link-btn.primary {
+            background:linear-gradient(90deg, #38bdf8, #0ea5e9);
+            border:none;
+        }
+        .stats {
+            display:grid;
+            grid-template-columns: repeat(auto-fit, minmax(155px,1fr));
+            gap:12px;
+        }
+        .stat-card {
+            background:rgba(15,23,42,.15);
+            border:1px solid rgba(255,255,255,.02);
+            border-radius:14px;
+            padding:10px 12px 9px;
+        }
+        .stat-title { font-size:.7rem; color:#94a3b8; }
+        .stat-value { font-size:1.25rem; font-weight:600; margin-top:4px; }
+        .chart-card { background:var(--card); border:1px solid rgba(255,255,255,.02); border-radius:16px; padding:14px 12px 10px; }
+        a { color:var(--accent); }
+
+        @media (max-width: 600px) {
+            .content { padding:14px 14px 20px; }
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="topbar">
+    <div class="brand">HR Turnover — рабочий стол</div>
+    <div>
+        <span sec:authentication="name"></span>
+        <span class="muted" sec:authorize="hasRole('ADMIN')">администратор</span>
+        &nbsp;|&nbsp;
+        <a th:href="@{/logout}" class="logout">Выйти</a>
+    </div>
+</div>
+
+<div class="content">
+    <div class="card">
+        <h1>Добро пожаловать 👋</h1>
+        <p class="muted">Здесь вы можете посмотреть кадровые события и показатели по текучести.</p>
+        <div class="link-row">
+            <a href="/hr-events" class="link-btn primary">Кадровые события</a>
+            <a href="/metrics" class="link-btn">Показатели</a>
+            <a href="/dict/ping" class="link-btn" sec:authorize="hasRole('ADMIN')">Проверка справочников</a>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-title">Кадровых событий</div>
+            <div class="stat-value" id="stEvents">—</div>
+            <div class="muted">все записи</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Текучесть за месяц, %</div>
+            <div class="stat-value" id="stTurnoverM">—</div>
+            <div class="muted">по текущему месяцу</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Удержание 12 мес, %</div>
+            <div class="stat-value" id="stRetention">—</div>
+            <div class="muted">годовой горизонт</div>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <div style="font-weight:600;font-size:.9rem;">Движение персонала</div>
+            <div class="muted" style="font-size:.7rem;">увольнения по месяцам</div>
+        </div>
+        <canvas id="usrChart" height="130"></canvas>
+    </div>
+
+    <div class="card" sec:authorize="hasRole('ADMIN')">
+        <h3 style="margin-bottom:4px;">Администрирование</h3>
+        <p class="muted" style="margin-bottom:10px;">Этого блока обычные пользователи не видят.</p>
+        <a href="/admin/dashboard" class="link-btn">Перейти в панель администратора</a>
+    </div>
+</div>
+
+<script>
+
+    fetch('/api/hr-events', { credentials: 'same-origin' })
+        .then(r => r.json())
+        .then(data => {
+
+            document.getElementById('stEvents').textContent = data.length;
+
+            const byMonth = {};
+            data.forEach(ev => {
+                if (ev.eventType !== 'TERMINATION') return;
+                if (!ev.eventDate) return;
+                const ym = ev.eventDate.slice(0,7);
+                byMonth[ym] = (byMonth[ym] || 0) + 1;
+            });
+            const labels = Object.keys(byMonth).sort();
+            const values = labels.map(l => byMonth[l]);
+
+            const ctx = document.getElementById('usrChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Увольнения',
+                        data: values,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56,189,248,.15)',
+                        tension: .35,
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#38bdf8'
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    responsive: true,
+                    scales: {
+                        x: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(148,163,184,.03)' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#94a3b8', stepSize: 1 },
+                            grid: { color: 'rgba(148,163,184,.03)' }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(() => {
+            document.getElementById('stEvents').textContent = '—';
+        });
+
+    fetch('/api/metrics/current', { credentials: 'same-origin' })
+        .then(r => r.json())
+        .then(m => {
+            if (m && typeof m.turnoverMonth !== 'undefined') {
+                document.getElementById('stTurnoverM').textContent = m.turnoverMonth + '%';
+            }
+            if (m && typeof m.retention12m !== 'undefined') {
+                document.getElementById('stRetention').textContent = m.retention12m + '%';
+            }
+        })
+        .catch(() => {});
+</script>
+</body>
+</html>
